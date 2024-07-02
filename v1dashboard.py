@@ -1,3 +1,8 @@
+''' Descricao -->
+Endpoint que fornece os dados históricos de cotação dos ativos negociados na B3.
+Formato OHLC (Open - High - Low - Close) para o ticker especificado e dentro do intervalo de datas determinado.
+'''
+
 import requests as req
 
 # funcao para ler a chave de chave.txt
@@ -19,7 +24,7 @@ print(res.json())
 
 
 
-# apenas dados precos de fechamento ->
+# apenas dados precos de fechamento -->
 # data = res.json()
 # precos_fechamento = [item['precoFechamento'] for item in data]
 # print(precos_fechamento)
