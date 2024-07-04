@@ -21,15 +21,9 @@ map_data = pd.DataFrame(
     columns=['lat', 'lon']) # 50 50 --> dividi cada valor do array por 50 para os pontos ficarem mais concentrados ao redor da cord.
 st.map(map_data)
 
-
-
-
-
-
 # Stock line chart
 
 st.title('Stock Line chart')
-
 
 dados = {
     'Mes': ['2024-01-01', '2024-01-02', '2024-01-03', '2024-01-04', '2024-01-05', '2024-01-06', '2024-01-07', '2024-01-08', '2024-01-09', '2024-01-10', '2024-01-11', '2024-01-12'],

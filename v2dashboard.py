@@ -37,7 +37,6 @@ endpoint = URL_BASE + '/bolsa/b3/avista/cotacoes/historico'
 res = req.get(endpoint, headers=HEADERS, params=PARAMS)
 
 
-
 resposta = res.json()
 precos_fechamento_ajustado = [item['precoFechamentoAjustado'] for item in resposta]
 datas = [item['data'] for item in resposta]
@@ -58,7 +57,6 @@ df = df.iloc[::-1] # dados em ordem
 st.title(f'Fintz Stock Dashboard - {ticker}')
 st.title(f"DF - {ticker}")
 st.write(df)
-
 
 # GRAFICO
 
