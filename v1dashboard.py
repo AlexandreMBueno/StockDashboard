@@ -1,30 +1,47 @@
-''' Descricao -->
-Endpoint que fornece os dados históricos de cotação dos ativos negociados na B3.
-Formato OHLC (Open - High - Low - Close) para o ticker especificado e dentro do intervalo de datas determinado.
-'''
+import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib as pyplot
+import altair as alt
 
-import requests as req
+# line chart
 
-# funcao para ler a chave de chave.txt
+st.title('Line chart')
+data = pd.DataFrame(np.random.rand(12, 1,), columns=['a'])
+st.line_chart(data)
 
-def ler_chave():
-    with open('chave.txt', 'r') as file:
-        for line in file:
-            if line.startswith('chave_ab'):
-                return line.split('=')[1].strip()
-    return None
+#rand(12, 1) gera um array de numeros aleatorios com 12 linhas e 1 coluna
+# se quiser colocar mais colunas, ou seja, linhas no grafico, precisamos tambem adicionar a coluna desejada em columns = ['b'] por ex
 
-URL_BASE = 'https://api.fintz.com.br'
-HEADERS = { 'X-API-Key': ler_chave() } # minha chave
-PARAMS = { 'ticker': 'BBAS3', 'dataInicio': '2024-06-03'} # dataFim opcional
+# map
 
-endpoint = URL_BASE + '/bolsa/b3/avista/cotacoes/historico'
-res = req.get(endpoint, headers=HEADERS, params=PARAMS)
-print(res.json())
-
+st.title("Map")
+map_data = pd.DataFrame(
+    np.random.randn(100, 2) / [50, 50] + [49.28, -123.12], # 100 pontos de coordenadas proximas a [49.28, -123.12]
+    columns=['lat', 'lon']) # 50 50 --> dividi cada valor do array por 50 para os pontos ficarem mais concentrados ao redor da cord.
+st.map(map_data)
 
 
-# apenas dados precos de fechamento -->
-# data = res.json()
-# precos_fechamento = [item['precoFechamento'] for item in data]
-# print(precos_fechamento)
+
+
+
+
+# Stock line chart
+
+st.title('Stock Line chart')
+
+
+dados = {
+    'Mes': ['2024-01-01', '2024-01-02', '2024-01-03', '2024-01-04', '2024-01-05', '2024-01-06', '2024-01-07', '2024-01-08', '2024-01-09', '2024-01-10', '2024-01-11', '2024-01-12'],
+    'Valor': ['15.0', '20.2', '16.5', '17.4', '17.5', '18.5', '19.0', '17.8', '20.0', '16.5', '19.2', '18.8']
+}
+
+df = pd.DataFrame(dados)
+df['Valor'] = df['Valor'].astype(float)
+print(df['Mes'].dtypes)
+df['Mes'] = pd.Categorical(df['Mes'], categories=['2024-01-01', '2024-01-02', '2024-01-03', '2024-01-04',
+                                                   '2024-01-05', '2024-01-06', '2024-01-07', '2024-01-08',
+                                                     '2024-01-09', '2024-01-10', '2024-01-11', '2024-01-12'],
+                                                     ordered=True)
+print(df['Mes'].dtypes)
+st.line_chart(df.set_index('Mes'))
