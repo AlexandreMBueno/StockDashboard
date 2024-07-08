@@ -7,6 +7,7 @@ import pandas as pd
 import requests as req
 import altair as alt # arrumar data e ver valores corretos no grafico
 from datetime import datetime, timedelta
+import time
 
 # funcao para ler a chave de chave.txt
 
@@ -22,7 +23,12 @@ data_default = (datetime.today() - timedelta(days=30)) # data padrao sera a de h
 ticker = st.sidebar.text_input('Ticker', value = 'BBAS3').upper()
 dataInicio = st.sidebar.date_input('Start Date', value = data_default)
 dataFim = st.sidebar.date_input('End Date', value = datetime.today())
+with st.spinner('Aguarde um momento...'):
+    time.sleep(3)
+st.success('Pronto!')
 
+if not ticker:
+    st.error('Por favor insira um ticker valido.', icon="🚨")
 
 
 # Convertendo as datas para string no formato correto
@@ -56,11 +62,12 @@ df.set_index('Data', inplace=True)
 
 df = df.iloc[::-1] # dados em ordem
 
+clciked = st.sidebar.button("ENTER")
 st.title(f'Fintz Stock Dashboard - {ticker}')
 st.title(f"DF - {ticker}")
 st.write(df)
 
-# GRAFICO
+# -------------- Grafico linha
 
 chart = alt.Chart(df.reset_index()).mark_line(point=True).encode(
     x=alt.X('Data:T', title='Data', axis=alt.Axis(format='%Y-%m-%d', labelAngle=-90)), # seta eixo x como data e o T maisculo serve para dizer que sao do tipo datetime
@@ -86,7 +93,7 @@ res_indicadores = req.get(endpoint_indicadores, headers=HEADERS, params=PARAMS)
 dados_indicadores = res_indicadores.json()
 df_res_indicadores = pd.DataFrame(dados_indicadores)
 
-st.title(f'Indicadores de {ticker}')
+st.title(f'Indicadores - {ticker}')
 st.table(df_res_indicadores)
 
 
@@ -102,7 +109,7 @@ res_proventos = req.get(endpoint_proventos, headers=HEADERS, params=PARAMS)
 dados_proventos = res_proventos.json()
 df_res_proventos = pd.DataFrame(dados_proventos)
 
-st.title(f'Eventos - Proventos de {ticker}')
+st.title(f'Eventos - Proventos - {ticker}')
 st.table(df_res_proventos)
 
 
@@ -119,5 +126,20 @@ res_bonificacoes = req.get(endpoint_bonificacoes, headers=HEADERS, params=PARAMS
 dados_bonificacoes = res_bonificacoes.json()
 df_res_bonificacoes = pd.DataFrame(dados_bonificacoes)
 
-st.title(f'Bonificacoes de {ticker}')
+st.title(f'Bonificacoes - {ticker}')
 st.table(df_res_bonificacoes)
+
+# -------- Desdobramentos
+
+# URL_BASE = 'https://api.fintz.com.br'
+# HEADERS = { 'X-API-Key': 'chave-de-teste-api-fintz' }
+PARAMS = { 'ticker': ticker, 'dataInicio': dataInicio }
+
+endpoint_desdobramentos = URL_BASE + '/bolsa/b3/avista/desdobramentos'
+res_desdobramentos = req.get(endpoint_desdobramentos, headers=HEADERS, params=PARAMS)
+
+dados_desdobramentos = res_desdobramentos.json()
+df_res_desdobramentos = pd.DataFrame(dados_desdobramentos)
+
+st.title(f'Desdobramentos - {ticker}')
+st.table(df_res_desdobramentos)
