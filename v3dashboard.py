@@ -5,12 +5,12 @@ Formato OHLC (Open - High - Low - Close) para o ticker especificado e dentro do 
 import streamlit as st
 import pandas as pd
 import requests as req
-import altair as alt # arrumar data e ver valores corretos no grafico
+import altair as alt
 from datetime import datetime, timedelta
 import time
 
-# funcao para ler a chave de chave.txt
 
+# ----- Funcao p ler api-key
 def ler_chave():
     with open('chave.txt', 'r') as file:
         for line in file:
@@ -18,11 +18,27 @@ def ler_chave():
                 return line.split('=')[1].strip()
     return None
 
-data_default = (datetime.today() - timedelta(days=30)) # data padrao sera a de hoje menos 30 dias (ultimo mes)
 
-ticker = st.sidebar.text_input('Ticker', value = 'BBAS3').upper()
-dataInicio = st.sidebar.date_input('Start Date', value = data_default)
-dataFim = st.sidebar.date_input('End Date', value = datetime.today())
+# ----- Default URL BASE e HEADERS 
+URL_BASE = 'https://api.fintz.com.br'
+HEADERS = { 'X-API-Key': ler_chave() }
+
+
+# ----- Request todos os tickers
+PARAMS = {'classe': 'ACOES', 'ativo': 'true'}
+
+endpoint = URL_BASE + '/bolsa/b3/avista/busca'
+res = req.get(endpoint, headers=HEADERS, params=PARAMS)
+response_data = res.json()
+
+todos_tickers = [item['ticker'] for item in response_data]
+ticker = st.sidebar.selectbox('Selecione um ticker', todos_tickers)
+data_default = (datetime.today() - timedelta(days=30))
+dataInicio = st.sidebar.date_input('Start Date', value=data_default).strftime('%Y-%m-%d')
+dataFim = st.sidebar.date_input('End Date', value=datetime.today()).strftime('%Y-%m-%d')
+
+
+# UI Features
 with st.spinner('Aguarde um momento...'):
     time.sleep(3)
 st.success('Pronto!')
@@ -31,64 +47,49 @@ if not ticker:
     st.error('Por favor insira um ticker valido.', icon="🚨")
 
 
-# Convertendo as datas para string no formato correto
-dataInicio = dataInicio.strftime('%Y-%m-%d')
-dataFim = dataFim.strftime('%Y-%m-%d')
-
-
-URL_BASE = 'https://api.fintz.com.br'
-HEADERS = { 'X-API-Key': ler_chave() }
+# ----- Request precoFechamentoAjustado
 PARAMS = { 'ticker': ticker, 'dataInicio': dataInicio, 'dataFim': dataFim} # dataFim opcional
 
-# fazer requisicao na url com os parametro passados
 endpoint = URL_BASE + '/bolsa/b3/avista/cotacoes/historico'
 res = req.get(endpoint, headers=HEADERS, params=PARAMS)
-
 
 resposta = res.json()
 precos_fechamento_ajustado = [item['precoFechamentoAjustado'] for item in resposta]
 datas = [item['data'] for item in resposta]
 
-# DATAFRAME
 
+# ----- DATAFRAME
 df = pd.DataFrame({
     'Data': datas,
     'PrecoFechamentoAjustado': precos_fechamento_ajustado
 })
 
 df['Data'] = pd.to_datetime(df['Data']).dt.date
-
 df.set_index('Data', inplace=True)
-
-df = df.iloc[::-1] # dados em ordem
+df = df.iloc[::-1]
 
 clciked = st.sidebar.button("ENTER")
-st.title(f'Fintz Stock Dashboard - {ticker}')
+st.title(f'Stock Dashboard - {ticker}')
 st.title(f"DF - {ticker}")
 st.write(df)
 
-# -------------- Grafico linha
 
+# ------ Grafico linha
 chart = alt.Chart(df.reset_index()).mark_line(point=True).encode(
-    x=alt.X('Data:T', title='Data', axis=alt.Axis(format='%Y-%m-%d', labelAngle=-90)), # seta eixo x como data e o T maisculo serve para dizer que sao do tipo datetime
-    y=alt.Y('PrecoFechamentoAjustado:Q', title='Preço de Fechamento Ajustado', scale=alt.Scale(zero=False)), # scale para grafico se ajustar ao valor
-    tooltip=['Data:T', 'PrecoFechamentoAjustado'] # p passar mouse em cima dos pontos e mostrar valor e data exatos
-)#.interactive() se quiser dar zoom
+    x=alt.X('Data:T', title='Data', axis=alt.Axis(format='%Y-%m-%d', labelAngle=-90)),
+    y=alt.Y('PrecoFechamentoAjustado:Q', title='Preço de Fechamento Ajustado', scale=alt.Scale(zero=False)),
+    tooltip=['Data:T', 'PrecoFechamentoAjustado']
+ ).interactive()
 
-#plotando grafico
 st.title(f'Grafico de linha - {ticker}')
-st.altair_chart(chart, use_container_width=True) # aumentar grafico
+st.altair_chart(chart, use_container_width=True)
 
 
-#--------    Indicadores
-
-# URL_BASE = 'https://api.fintz.com.br'
-# HEADERS = { 'X-API-Key': 'chave-de-teste-api-fintz' }
+# ----- Indicadores
 PARAMS = { 'ticker': ticker }
 
 endpoint_indicadores = URL_BASE + '/bolsa/b3/avista/indicadores/por-ticker'
 res_indicadores = req.get(endpoint_indicadores, headers=HEADERS, params=PARAMS)
-
 
 dados_indicadores = res_indicadores.json()
 df_res_indicadores = pd.DataFrame(dados_indicadores)
@@ -97,15 +98,12 @@ st.title(f'Indicadores - {ticker}')
 st.table(df_res_indicadores)
 
 
-# --------- Proventos
-
-# URL_BASE = 'https://api.fintz.com.br'
-# HEADERS = { 'X-API-Key': 'chave-de-teste-api-fintz' }
+# ----- Proventos
 PARAMS = { 'ticker': ticker, 'dataInicio': dataInicio}
 
 endpoint_proventos = URL_BASE + '/bolsa/b3/avista/proventos'
 res_proventos = req.get(endpoint_proventos, headers=HEADERS, params=PARAMS)
-# print(res_proventos.json())
+
 dados_proventos = res_proventos.json()
 df_res_proventos = pd.DataFrame(dados_proventos)
 
@@ -113,15 +111,11 @@ st.title(f'Eventos - Proventos - {ticker}')
 st.table(df_res_proventos)
 
 
-# -------- Bonificacoes
-
-# URL_BASE = 'https://api.fintz.com.br'
-# HEADERS = { 'X-API-Key': 'chave-de-teste-api-fintz' }
+# ----- Request Bonificacoes
 PARAMS = { 'ticker': ticker, 'dataInicio': dataInicio }
 
 endpoint_bonificacoes = URL_BASE + '/bolsa/b3/avista/bonificacoes'
 res_bonificacoes = req.get(endpoint_bonificacoes, headers=HEADERS, params=PARAMS)
-# print(res_bonificacoes.json())
 
 dados_bonificacoes = res_bonificacoes.json()
 df_res_bonificacoes = pd.DataFrame(dados_bonificacoes)
@@ -129,10 +123,8 @@ df_res_bonificacoes = pd.DataFrame(dados_bonificacoes)
 st.title(f'Bonificacoes - {ticker}')
 st.table(df_res_bonificacoes)
 
-# -------- Desdobramentos
 
-# URL_BASE = 'https://api.fintz.com.br'
-# HEADERS = { 'X-API-Key': 'chave-de-teste-api-fintz' }
+# ----- Request Desdobramentos
 PARAMS = { 'ticker': ticker, 'dataInicio': dataInicio }
 
 endpoint_desdobramentos = URL_BASE + '/bolsa/b3/avista/desdobramentos'
