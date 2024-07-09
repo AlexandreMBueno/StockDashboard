@@ -51,7 +51,7 @@ st.success('Pronto!')
 #     st.error('Por favor insira um ticker valido.', icon="🚨")
 
 
-# ----- Request precoFechamentoAjustado
+# ----- Request Preco Fechamento Ajustado
 PARAMS = { 'ticker': ticker, 'dataInicio': dataInicio, 'dataFim': dataFim} # dataFim opcional
 
 endpoint = URL_BASE + '/bolsa/b3/avista/cotacoes/historico'
@@ -69,7 +69,7 @@ st.title(f'Stock Dashboard - {ticker}')
 # ----- Dataframe
 df = pd.DataFrame({
     'Data': datas,
-    'PrecoFechamentoAjustado': precos_fechamento_ajustado
+    'Preco Fechamento Ajustado': precos_fechamento_ajustado
 })
 
 df['Data'] = pd.to_datetime(df['Data']).dt.date
@@ -83,8 +83,8 @@ st.write(df)
 # ------ Grafico linha
 chart = alt.Chart(df.reset_index()).mark_line(point=True).encode(
     x=alt.X('Data:T', title='Data', axis=alt.Axis(format='%Y-%m-%d', labelAngle=-90)),
-    y=alt.Y('PrecoFechamentoAjustado:Q', title='Preço de Fechamento Ajustado', scale=alt.Scale(zero=False)),
-    tooltip=['Data:T', 'PrecoFechamentoAjustado']
+    y=alt.Y('Preco Fechamento Ajustado:Q', title='Preço de Fechamento Ajustado', scale=alt.Scale(zero=False)),
+    tooltip=['Data:T', 'Preco Fechamento Ajustado']
  ).interactive()
 
 st.title(f'Grafico de linha - {ticker}')
@@ -100,6 +100,9 @@ res_indicadores = req.get(endpoint_indicadores, headers=HEADERS, params=PARAMS)
 dados_indicadores = res_indicadores.json()
 df_res_indicadores = pd.DataFrame(dados_indicadores)
 
+df_res_indicadores.rename(columns={'ticker': 'Ticker', 'indicador': 'Indicador', 'data': 'Data', 'valor': 'Valor(R$)'}, inplace=True)
+df_res_indicadores.fillna('-', inplace=True)
+
 st.title(f'Indicadores - {ticker}')
 st.table(df_res_indicadores)
 
@@ -112,6 +115,9 @@ res_proventos = req.get(endpoint_proventos, headers=HEADERS, params=PARAMS)
 
 dados_proventos = res_proventos.json()
 df_res_proventos = pd.DataFrame(dados_proventos)
+
+df_res_proventos.rename(columns={'ticker': 'Ticker', 'dataCom': 'Data Com', 'dataPagamento': 'Data Pagamento',
+                                  'dataAprovacao': 'Data Aprovacao', 'valor': 'Valor', 'tipo': 'Tipo'}, inplace=True)
 
 st.title(f'Eventos - Proventos - {ticker}')
 st.table(df_res_proventos)
@@ -126,6 +132,10 @@ res_bonificacoes = req.get(endpoint_bonificacoes, headers=HEADERS, params=PARAMS
 dados_bonificacoes = res_bonificacoes.json()
 df_res_bonificacoes = pd.DataFrame(dados_bonificacoes)
 
+df_res_bonificacoes.rename(columns={'ticker': 'Ticker', 'ativoEmitido': 'Ativo Emitido', 'proporcao': 'Proporcao',
+                                    'dataCom': 'Data Com', 'dataAnuncio': 'Data Anuncio',
+                                    'dataIncorporacao': 'Data Incorporacao', 'valorBase': 'Valor Base'}, inplace=True)
+
 st.title(f'Bonificacoes - {ticker}')
 st.table(df_res_bonificacoes)
 
@@ -138,6 +148,9 @@ res_desdobramentos = req.get(endpoint_desdobramentos, headers=HEADERS, params=PA
 
 dados_desdobramentos = res_desdobramentos.json()
 df_res_desdobramentos = pd.DataFrame(dados_desdobramentos)
+
+df_res_desdobramentos.rename(columns={'ticker': 'Ticker', 'valorAntes': 'Valor Antes', 'valorDepois': 'Valor Depois',
+                                      'dataCom': 'Data Com', 'dataAnuncio': 'Data Anuncio', 'tipo': 'Tipo'}, inplace=True)
 
 st.title(f'Desdobramentos - {ticker}')
 st.table(df_res_desdobramentos)
