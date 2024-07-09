@@ -2,6 +2,8 @@
 Endpoint que fornece os dados históricos de cotação dos ativos negociados na B3.
 Formato OHLC (Open - High - Low - Close) para o ticker especificado e dentro do intervalo de datas determinado.
 '''
+
+
 import streamlit as st
 import pandas as pd
 import requests as req
@@ -32,10 +34,12 @@ res = req.get(endpoint, headers=HEADERS, params=PARAMS)
 response_data = res.json()
 
 todos_tickers = [item['ticker'] for item in response_data]
-ticker = st.sidebar.selectbox('Selecione um ticker', todos_tickers)
 data_default = (datetime.today() - timedelta(days=30))
+
+ticker = st.sidebar.selectbox('Selecione um ticker', todos_tickers)
 dataInicio = st.sidebar.date_input('Start Date', value=data_default).strftime('%Y-%m-%d')
 dataFim = st.sidebar.date_input('End Date', value=datetime.today()).strftime('%Y-%m-%d')
+clicked = st.sidebar.button("ENTER")
 
 
 # UI Features
@@ -43,8 +47,8 @@ with st.spinner('Aguarde um momento...'):
     time.sleep(3)
 st.success('Pronto!')
 
-if not ticker:
-    st.error('Por favor insira um ticker valido.', icon="🚨")
+# if not ticker and ticker not in todos_tickers:
+#     st.error('Por favor insira um ticker valido.', icon="🚨")
 
 
 # ----- Request precoFechamentoAjustado
@@ -58,7 +62,11 @@ precos_fechamento_ajustado = [item['precoFechamentoAjustado'] for item in respos
 datas = [item['data'] for item in resposta]
 
 
-# ----- DATAFRAME
+# ----- Header
+st.title(f'Stock Dashboard - {ticker}')
+
+
+# ----- Dataframe
 df = pd.DataFrame({
     'Data': datas,
     'PrecoFechamentoAjustado': precos_fechamento_ajustado
@@ -68,8 +76,6 @@ df['Data'] = pd.to_datetime(df['Data']).dt.date
 df.set_index('Data', inplace=True)
 df = df.iloc[::-1]
 
-clciked = st.sidebar.button("ENTER")
-st.title(f'Stock Dashboard - {ticker}')
 st.title(f"DF - {ticker}")
 st.write(df)
 
