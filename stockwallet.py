@@ -5,7 +5,7 @@ import pandas as pd
 import requests as req
 from datetime import datetime, timedelta
 
-# Funcao para ler a chave da API
+# ----- Função para ler a chave da API
 def ler_chave():
     with open('chave.txt', 'r') as file:
         for line in file:
@@ -13,86 +13,113 @@ def ler_chave():
                 return line.split('=')[1].strip()
     return None
 
-# URL base e headers
+# ----- URL base e headers
 URL_BASE = 'https://api.fintz.com.br'
 HEADERS = {'X-API-Key': ler_chave()}
 
-# ----- Request Preco Fechamento Ajustado
+# ----- request preco fechamento ajustado
 def obter_precos(ticker, data_inicio, data_fim):
+    endpoint = f"{URL_BASE}/bolsa/b3/avista/cotacoes/historico"
     params = {'ticker': ticker, 'dataInicio': data_inicio, 'dataFim': data_fim}
-    endpoint = URL_BASE + '/bolsa/b3/avista/cotacoes/historico'
     res = req.get(endpoint, headers=HEADERS, params=params)
-    resposta = res.json()
-    return [(item['data'], item['precoFechamentoAjustado']) for item in resposta]
+    return [(item['data'], item['precoFechamentoAjustado']) for item in res.json()]
 
+# ----- request todos os ticker
+def obter_todos_tickers():
+    endpoint = f"{URL_BASE}/bolsa/b3/avista/busca"
+    params = {'classe': 'ACOES', 'ativo': 'true'}
+    res = req.get(endpoint, headers=HEADERS, params=params)
+    return [item['ticker'] for item in res.json()]
 
-carteiras = {
-    'Carteira 1': {'Acoes': ['RENT3', 'BBAS3', 'CXSE3'], 'Quantidade': [150, 100, 250]},
-    'Carteira 2': {'Acoes': ['PETR4', 'VALE3', 'ITUB4'], 'Quantidade': [200, 150, 300]},
-    'Carteira 3': {'Acoes': ['ABEV3', 'BBDC4', 'ITSA4'], 'Quantidade': [250, 200, 150]}
-}
+todos_tickers = obter_todos_tickers()
 
-# sidebar com seleionar carteira e datas
-carteira_selecionada = st.sidebar.selectbox('Selecione a carteira', list(carteiras.keys()))
-carteira = carteiras[carteira_selecionada]
-data_inicio = st.sidebar.date_input('Data Inicio', value=(datetime.today() - timedelta(days=30)))
-data_fim = st.sidebar.date_input('Data Fim', value=datetime.today())
+st.sidebar.title('Adicionar Ativo')
+ticker = st.sidebar.selectbox('Selecione um ticker', todos_tickers)
+quantidade = st.sidebar.number_input('Quantidade', min_value=1, step=1)
+valor_pago = st.sidebar.number_input('Valor Pago (por ação)', min_value=0.01, step=0.01)
+data_compra = st.sidebar.date_input('Data de Compra', value=datetime.today()).strftime('%Y-%m-%d')
+adicionar = st.sidebar.button('Adicionar Ativo')
 
+data_fim = st.sidebar.date_input('Data Fim', value=datetime.today()).strftime('%Y-%m-%d')
 
-# pegamos precos de fechamento ajustados, ou seja, valores_iniciais = historico_precos[0] e valores finais =  historico_precos[1]
-historico_precos = {acao: obter_precos(acao, data_inicio.strftime('%Y-%m-%d'), data_fim.strftime('%Y-%m-%d')) for acao in carteira['Acoes']}
+# ----- lista de ativos q o usuario passa
+if 'ativos' not in st.session_state: # essa session_state e padrao do streamlit p dados q o usuario digitaa
+    st.session_state['ativos'] = []
+
+if adicionar:
+    st.session_state['ativos'].append({'ticker': ticker, 'quantidade': quantidade, 'valor_pago': valor_pago, 'data_compra': data_compra})
+
+ativos = st.session_state['ativos']
+
+# ativos_consolidados = dict que armazena a qntd total e o valor total pago para cada ticker
+ativos_consolidados = {} # isso serve p consolidar todas as compras de um mesmo ativo, transacoes, qntd e valores pagos em uma entrada so
+for ativo in ativos:
+
+    ticker = ativo['ticker']
+    if ticker not in ativos_consolidados:
+        ativos_consolidados[ticker] = {'quantidade': 0, 'valor_total_pago': 0}
+    ativos_consolidados[ticker]['quantidade'] += ativo['quantidade']
+    ativos_consolidados[ticker]['valor_total_pago'] += ativo['quantidade'] * ativo['valor_pago']
 
 valores_iniciais = []
 valores_finais = []
+valores_medios_pagos = []
+valores_fechamento_atuais = []
+quantidades = []
+tickers = []
 
+for ticker, dados in ativos_consolidados.items():
+    quantidade = dados['quantidade']
+    valor_total_pago = dados['valor_total_pago']
+    valor_medio_pago = valor_total_pago / quantidade
 
-# Itera sobre as ações e qntd delas na carteira selecionada
-for acao, qtd in zip(carteira['Acoes'], carteira['Quantidade']):
+    historico = obter_precos(ticker, ativos[0]['data_compra'], data_fim)
+    valor_fechamento_atual = historico[0][1] if historico else 0
+    valor_final = quantidade * valor_fechamento_atual
 
-    valor_inicial = qtd * historico_precos[acao][0][1]
-    valores_iniciais.append(valor_inicial)
-    
-    valor_final = qtd * historico_precos[acao][-1][1]
+    valores_iniciais.append(valor_total_pago)
+    valores_medios_pagos.append(round(valor_medio_pago, 2))
     valores_finais.append(valor_final)
-
+    valores_fechamento_atuais.append(valor_fechamento_atual)
+    quantidades.append(quantidade)
+    tickers.append(ticker)
 
 valor_inicial_total = sum(valores_iniciais)
 valor_final_total = sum(valores_finais)
-rendimento_total = (valor_final_total - valor_inicial_total) / valor_inicial_total * 100
+rendimento_total = ((valor_final_total - valor_inicial_total) / valor_inicial_total * 100) if valor_inicial_total != 0 else 0
 
-st.sidebar.write(f'Valor inicial: R$ {valor_inicial_total:.2f}')
-st.sidebar.write(f'Valor final: R$ {valor_final_total:.2f}')
+st.sidebar.write(f'Valor inicial: R$ {valor_inicial_total:,.2f}')
+st.sidebar.write(f'Valor final: R$ {valor_final_total:,.2f}')
 st.sidebar.write(f'Rendimento da carteira: {rendimento_total:.2f}%')
 
-
-# ----- df
 df_resumo = pd.DataFrame({
-    'Acoes': carteira['Acoes'],
-    'Quantidade': carteira['Quantidade'],
-    'Valor Inicial Total R$': valores_iniciais,
-    'Valor Final Total R$': valores_finais,
-    'Rendimento %': [(final - inicial) / inicial * 100 for final, inicial in zip(valores_finais, valores_iniciais)]
+    'Ticker': tickers,
+    'Quantidade': quantidades,
+    'Valor Médio Pago R$': valores_medios_pagos,
+    'Valor Fechamento Atual R$': valores_fechamento_atuais,
+    'Valor Aplicado Total R$': [f"{valor:,.2f}" for valor in valores_iniciais],
+    'Valor Final Total R$': [f"{valor:,.2f}" for valor in valores_finais],
+    'Rendimento %': [(final - inicial) / inicial * 100 if inicial != 0 else 0 for final, inicial in zip(valores_finais, valores_iniciais)]
 })
 
-# so p usuario selecionar graficos ou resumo
 menu_opcoes = option_menu(
     menu_title=None,
-    options=["Resumo", "Graficos"],
+    options=["Resumo", "Gráficos"],
     default_index=0,
     orientation="horizontal",
-    styles={"nav-link-selected": {"background-color": "rgb(46, 134, 222)"}}  # cor fintz
+    styles={"nav-link-selected": {"background-color": "rgb(46, 134, 222)"}}
 )
 
-st.title('Carteira de Acoes')
+st.title('Carteira de Ações')
 
-if menu_opcoes == 'Graficos':
-    st.subheader('Distribuicao das Acoes na Carteira')
+if menu_opcoes == 'Gráficos':
+    st.subheader('Distribuição das Ações na Carteira')
     fig, ax = plt.subplots()
     percentuais = [(valor / sum(valores_finais)) * 100 for valor in valores_finais]
-    ax.pie(percentuais, labels=carteira['Acoes'], startangle=90, wedgeprops=dict(width=0.35))
+    ax.pie(percentuais, labels=tickers, startangle=90, wedgeprops=dict(width=0.35))
     ax.axis('equal')
     st.pyplot(fig)
 
 elif menu_opcoes == 'Resumo':
-    st.subheader(f'Resumo das Acoes\n {data_inicio} - {data_fim}')
+    st.subheader(f'Resumo das Ações\n {data_fim}')
     st.dataframe(df_resumo)
