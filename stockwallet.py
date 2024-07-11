@@ -68,17 +68,24 @@ valores_fechamento_atuais = []
 quantidades = []
 tickers = []
 
+# p cada ticker e os dados dele
+# pega a quantidade de ações
+# extraimos o valor total pago
+# calculamos o valor medio pago
+# pegamos o hist de preços
+# determinamos o preco de fechamento atual
+# calcula o valor final do ativo
 for ticker, dados in ativos_consolidados.items():
     quantidade = dados['quantidade']
     valor_total_pago = dados['valor_total_pago']
     valor_medio_pago = valor_total_pago / quantidade
 
     historico = obter_precos(ticker, ativos[0]['data_compra'], data_fim)
-    valor_fechamento_atual = historico[0][1] if historico else 0
-    valor_final = quantidade * valor_fechamento_atual
+    valor_fechamento_atual = historico[0][1] if historico else 0 # pega o preco de fechamento do primeiro dia do hist retornado da api.
+    valor_final = quantidade * valor_fechamento_atual # isso pq a ordem na resposta da api ta ao contrario
 
     valores_iniciais.append(valor_total_pago)
-    valores_medios_pagos.append(round(valor_medio_pago, 2))
+    valores_medios_pagos.append(round(valor_medio_pago, 2)) # arredonda 2 casas
     valores_finais.append(valor_final)
     valores_fechamento_atuais.append(valor_fechamento_atual)
     quantidades.append(quantidade)
