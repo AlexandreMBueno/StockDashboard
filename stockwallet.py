@@ -1,17 +1,20 @@
+import os
 import streamlit as st
 from streamlit_option_menu import option_menu
 import matplotlib.pyplot as plt
 import pandas as pd
 import requests as req
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ----- Função para ler a chave da API
 def ler_chave():
-    with open('chave.txt', 'r') as file:
-        for line in file:
-            if line.startswith('chave_ab'):
-                return line.split('=')[1].strip()
-    return None
+    chave = os.getenv('API_KEY')
+    if not chave:
+        raise ValueError("A chave da API não foi encontrada nas variáveis de ambiente.")
+    return chave
 
 # ----- URL base e headers
 URL_BASE = 'https://api.fintz.com.br'
